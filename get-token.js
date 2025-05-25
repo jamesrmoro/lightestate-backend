@@ -1,5 +1,5 @@
 const { JWT } = require('google-auth-library');
-const serviceAccount = require('./service-account.json');
+const serviceAccount = require('./service-account-teste.json');
 
 const SCOPES = ['https://www.googleapis.com/auth/firebase.messaging'];
 
