@@ -57,51 +57,42 @@ async function getAccessToken() {
   }
 }
 
+// ...tudo igual acima...
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ ok: false, message: 'Only POST allowed' });
   }
 
   try {
-    const { ToFull, Subject, TextBody } = req.body || {};
-    const destinatario = ToFull && ToFull[0]?.Email;
+    const { Subject, TextBody } = req.body || {};
 
     console.log('Webhook recebido!');
-    console.log('Destinatário:', destinatario);
     console.log('Assunto:', Subject);
 
-    if (!destinatario) {
-      console.warn('Nenhum destinatário encontrado no payload.');
-      return res.status(200).json({ ok: false, message: 'No destination email found.' });
-    }
-
-    // Busca tokens FCM no Supabase
+    // Busca TODOS tokens FCM no Supabase (broadcast)
     const { data: tokens, error } = await supabase
       .from('push_tokens')
-      .select('token')
-      .eq('email', destinatario);
+      .select('token');
 
     if (error) {
-      console.error('Erro buscando token:', error);
+      console.error('Erro buscando tokens:', error);
       return res.status(200).json({ ok: false, message: 'Token search failed' });
     }
     if (!tokens || tokens.length === 0) {
-      console.warn('Nenhum token encontrado para', destinatario);
-      return res.status(200).json({ ok: false, message: 'No tokens for this email.' });
+      console.warn('Nenhum token encontrado no banco.');
+      return res.status(200).json({ ok: false, message: 'No tokens registered.' });
     }
 
-    // Exibe todos tokens encontrados para debug
     tokens.forEach((t, i) => {
-      console.log(`[Token #${i + 1}] Token do destinatário para push:`, t.token);
+      console.log(`[Token #${i + 1}] Token para push:`, t.token);
     });
 
-    // Monta o conteúdo da notificação
     const title = Subject || 'Novo e-mail recebido';
     const body = TextBody
       ? (TextBody.length > 180 ? TextBody.slice(0, 180) + '...' : TextBody)
       : 'Você recebeu um novo e-mail!';
 
-    // Access token válido FCM API v1
     let accessToken;
     try {
       accessToken = await getAccessToken();
@@ -110,7 +101,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ ok: false, message: 'Failed to get access token', error: err.message });
     }
 
-    // Envia a notificação push para cada token
+    let sentCount = 0;
     for (const t of tokens) {
       try {
         console.log('Enviando push para token:', t.token);
@@ -121,12 +112,11 @@ export default async function handler(req, res) {
             notification: { title, body },
             webpush: {
               fcm_options: {
-                link: "https://lightestate.jamesrmoro.me" // ou o domínio do seu app
+                link: "https://lightestate.jamesrmoro.me"
               }
             }
           }
         };
-        // Também exibe o payload que será enviado
         console.log('Payload da notificação:', JSON.stringify(payload));
 
         const response = await axios.post(messagingEndpoint, payload, {
@@ -135,16 +125,39 @@ export default async function handler(req, res) {
             'Content-Type': 'application/json'
           }
         });
-        console.log('Push enviado para', destinatario, t.token, 'Response:', response.data);
+        console.log('Push enviado para token', t.token, 'Response:', response.data);
+        sentCount++;
       } catch (e) {
-        console.error('Erro ao enviar push:', e?.response?.data || e.message, 'Token:', t.token);
+        const errorData = e?.response?.data;
+        console.error('Erro ao enviar push:', errorData || e.message, 'Token:', t.token);
+
+        // Remove token do Supabase se for UNREGISTERED
+        if (
+          errorData?.error?.details?.some(
+            detail => detail.errorCode === "UNREGISTERED"
+          )
+        ) {
+          try {
+            const { error: removeError } = await supabase
+              .from('push_tokens')
+              .delete()
+              .eq('token', t.token);
+            if (removeError) {
+              console.error('Erro ao remover token inválido do Supabase:', removeError);
+            } else {
+              console.log('Token UNREGISTERED removido do Supabase:', t.token);
+            }
+          } catch (supabaseError) {
+            console.error('Erro inesperado ao remover token:', supabaseError);
+          }
+        }
       }
     }
 
-
-    res.status(200).json({ ok: true, sent: tokens.length });
+    res.status(200).json({ ok: true, sent: sentCount });
   } catch (err) {
     console.error('ERRO GERAL no handler:', err);
     res.status(500).json({ ok: false, error: err.message });
   }
 }
+
