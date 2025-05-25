@@ -1,5 +1,3 @@
-// pages/api/webhook.js
-
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { JWT } from 'google-auth-library';
@@ -57,9 +55,16 @@ async function getAccessToken() {
   }
 }
 
-// ...tudo igual acima...
-
 export default async function handler(req, res) {
+  // --- CORS HEADERS --- (primeira coisa dentro do handler!)
+  res.setHeader('Access-Control-Allow-Origin', '*'); // ou sua extensão no lugar de *
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ ok: false, message: 'Only POST allowed' });
   }
@@ -113,9 +118,8 @@ export default async function handler(req, res) {
             },
             webpush: {
               notification: {
-                icon: "/icone.png", // Aqui vai o ícone
-                badge: "/icone.png", // Se quiser um badge
-                // Outras opções webpush: image, actions etc.
+                icon: "/icone.png",
+                badge: "/icone.png"
               },
               fcm_options: {
                 link: "https://lightestate.jamesrmoro.me"
@@ -167,4 +171,3 @@ export default async function handler(req, res) {
     res.status(500).json({ ok: false, error: err.message });
   }
 }
-
