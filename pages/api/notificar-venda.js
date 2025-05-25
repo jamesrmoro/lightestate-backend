@@ -47,12 +47,11 @@ export default async function handler(req, res) {
   const tokens = (tokensData || []).map(t => t.token).filter(Boolean);
   if (!tokens.length) return res.json({ sucesso: true, avisos: 'Nenhum token registrado' });
 
+  // Prepare apenas data
   const mensagem = {
-    notification: {
+    data: {
       title: `Nova venda!`,
       body: `Apto ${numero_apartamento} (${empreendimento}) vendido.`,
-    },
-    data: {
       empreendimento: String(empreendimento),
       numero_apartamento: String(numero_apartamento),
       andar: String(andar),
@@ -62,11 +61,9 @@ export default async function handler(req, res) {
   };
 
   try {
-    // ALTERAÇÃO AQUI!
     const response = await admin.messaging().sendEachForMulticast({
       tokens,
-      notification: mensagem.notification,
-      data: mensagem.data
+      data: mensagem.data // Apenas DATA!
     });
     res.json({
       sucesso: true,
