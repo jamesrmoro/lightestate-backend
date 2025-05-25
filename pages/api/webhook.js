@@ -65,7 +65,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { Subject, TextBody } = req.body || {};
+    const { title, body, Subject, TextBody } = req.body || {};
 
     console.log('Webhook recebido!');
     console.log('Assunto:', Subject);
@@ -88,10 +88,8 @@ export default async function handler(req, res) {
       console.log(`[Token #${i + 1}] Token para push:`, t.token);
     });
 
-    const title = Subject || 'Novo e-mail recebido';
-    const body = TextBody
-      ? (TextBody.length > 180 ? TextBody.slice(0, 180) + '...' : TextBody)
-      : 'Você recebeu um novo e-mail!';
+    const pushTitle = title || Subject || 'Notificação';
+    const pushBody = body || TextBody || 'Você recebeu uma nova notificação!';
 
     let accessToken;
     try {
@@ -110,8 +108,8 @@ export default async function handler(req, res) {
           message: {
             token: t.token,
             notification: {
-              title,
-              body
+              title: pushTitle,
+              body: pushBody
             },
             webpush: {
               notification: {
