@@ -15,16 +15,18 @@ export default async function handler(req, res) {
 
   // 1. Pegue o destinatário principal do e-mail
   const { ToFull, Subject, TextBody } = req.body || {};
-  // ToFull é um array, vamos pegar o email [0]
   const destinatario = ToFull && ToFull[0]?.Email;
 
+  console.log('Webhook recebido!');
+  console.log('Destinatário:', destinatario);
+  console.log('Assunto:', Subject);
+
   if (!destinatario) {
+    console.warn('Nenhum destinatário encontrado no payload.');
     return res.status(200).json({ ok: false, message: 'No destination email found.' });
   }
 
   // 2. Busca todos os tokens FCM desse destinatário no Supabase
-  // Troque para o nome certo da tabela/campo no seu banco, exemplo:
-  // push_tokens: { email, token }
   const { data: tokens, error } = await supabase
     .from('push_tokens')
     .select('token')
@@ -39,6 +41,9 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: false, message: 'No tokens for this email.' });
   }
 
+  console.log('Tokens encontrados:', tokens.map(t => t.token).join(', '));
+  console.log('Server Key está setada?', !!FCM_SERVER_KEY);
+
   // 3. Monta o conteúdo da notificação
   const title = Subject || 'Novo e-mail recebido';
   const body = TextBody
@@ -48,7 +53,9 @@ export default async function handler(req, res) {
   // 4. Envia a notificação push para cada token
   for (const t of tokens) {
     try {
-      await axios.post('https://fcm.googleapis.com/fcm/send', {
+      console.log('Enviando push para token:', t.token);
+
+      const response = await axios.post('https://fcm.googleapis.com/fcm/send', {
         to: t.token,
         notification: {
           title,
@@ -60,9 +67,11 @@ export default async function handler(req, res) {
           'Content-Type': 'application/json'
         }
       });
-      console.log('Push enviado para', destinatario, t.token);
+
+      console.log('Push enviado para', destinatario, t.token, 'Response:', response.data);
     } catch (e) {
-      console.error('Erro ao enviar push:', e?.response?.data || e.message);
+      // Mostra erro completo e token
+      console.error('Erro ao enviar push:', e?.response?.data || e.message, 'Token:', t.token);
     }
   }
 
