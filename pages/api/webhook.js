@@ -118,7 +118,12 @@ export default async function handler(req, res) {
         const payload = {
           message: {
             token: t.token,
-            notification: { title, body }
+            notification: { title, body },
+            webpush: {
+              fcm_options: {
+                link: "https://lightestate.jamesrmoro.me" // ou o domínio do seu app
+              }
+            }
           }
         };
         // Também exibe o payload que será enviado
@@ -135,6 +140,7 @@ export default async function handler(req, res) {
         console.error('Erro ao enviar push:', e?.response?.data || e.message, 'Token:', t.token);
       }
     }
+
 
     res.status(200).json({ ok: true, sent: tokens.length });
   } catch (err) {
