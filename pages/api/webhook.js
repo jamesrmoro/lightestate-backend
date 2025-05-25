@@ -1,20 +1,22 @@
+// pages/api/webhook.js
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { JWT } from 'google-auth-library';
 
-// --- Carrega Service Account do arquivo local ou variável de ambiente ---
+// --- Carrega Service Account ---
 let serviceAccount;
 try {
   if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     console.log('Lendo Service Account do ENV...');
     serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  } else if (process.env.FIREBASE_ADMIN_JSON) {
+    console.log('Lendo Service Account do ENV (FIREBASE_ADMIN_JSON)...');
+    serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_JSON);
   } else {
-    // Apenas para ambiente local
-    console.log('Lendo Service Account do arquivo local...');
+    // Fallback para ambiente local
     const fs = require('fs');
     const path = require('path');
     const saPath = path.resolve(process.cwd(), 'service-account.json');
-    console.log('Path do arquivo local:', saPath);
     serviceAccount = JSON.parse(fs.readFileSync(saPath, 'utf8'));
   }
   console.log('Service account carregada, client_email:', serviceAccount.client_email);
@@ -31,7 +33,7 @@ const SCOPES = ['https://www.googleapis.com/auth/firebase.messaging'];
 const projectId = serviceAccount.project_id;
 const messagingEndpoint = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
 
-// --- Função para obter access token OAuth2 ---
+// --- Access Token JWT para FCM v1 ---
 async function getAccessToken() {
   try {
     const client = new JWT({
@@ -66,7 +68,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: false, message: 'No destination email found.' });
     }
 
-    // Busca todos os tokens FCM desse destinatário no Supabase
+    // Busca tokens FCM no Supabase
     const { data: tokens, error } = await supabase
       .from('push_tokens')
       .select('token')
@@ -89,7 +91,7 @@ export default async function handler(req, res) {
       ? (TextBody.length > 180 ? TextBody.slice(0, 180) + '...' : TextBody)
       : 'Você recebeu um novo e-mail!';
 
-    // Obtém access token válido para FCM API v1
+    // Access token válido FCM API v1
     let accessToken;
     try {
       accessToken = await getAccessToken();

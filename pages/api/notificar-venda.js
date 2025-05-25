@@ -1,3 +1,4 @@
+// pages/api/notificar-venda.js
 const { createClient } = require('@supabase/supabase-js');
 const admin = require('firebase-admin');
 
@@ -24,7 +25,7 @@ if (!admin.apps.length && serviceAccount && serviceAccount.project_id) {
 
 // --- Supabase Init ---
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export default async function handler(req, res) {
@@ -47,7 +48,7 @@ export default async function handler(req, res) {
   const tokens = (tokensData || []).map(t => t.token).filter(Boolean);
   if (!tokens.length) return res.json({ sucesso: true, avisos: 'Nenhum token registrado' });
 
-  // Prepare apenas data
+  // Apenas data (não mostra notificação na web, só background tasks)
   const mensagem = {
     data: {
       title: 'Nova venda!',
@@ -59,8 +60,6 @@ export default async function handler(req, res) {
       venda_data: String(data || ''),
     }
   };
-
-
 
   try {
     const response = await admin.messaging().sendEachForMulticast({
@@ -77,4 +76,4 @@ export default async function handler(req, res) {
     console.error('Erro ao enviar push:', err, err.stack, JSON.stringify(err, null, 2));
     res.status(500).json({ error: 'Erro ao enviar push', detalhe: err.message });
   }
-}
+};
