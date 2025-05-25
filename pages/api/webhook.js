@@ -1,4 +1,5 @@
 // pages/api/webhook.js
+
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { JWT } from 'google-auth-library';
@@ -41,8 +42,14 @@ async function getAccessToken() {
       key: serviceAccount.private_key,
       scopes: SCOPES,
     });
-    const { token } = await client.authorize();
-    console.log('AccessToken obtido:', token ? token.slice(0, 16) + '...' : 'vazio');
+    // O authorize pode retornar access_token ou token, dependendo da versão
+    const tokens = await client.authorize();
+    const token = tokens.access_token || tokens.token;
+    if (!token) {
+      throw new Error('Access token não retornado pelo Google Auth.');
+    }
+    // Mostra um trecho do token só para debug (nunca mostre tudo em produção)
+    console.log('AccessToken obtido:', token.slice(0, 24) + '... (' + token.length + ' chars)');
     return token;
   } catch (err) {
     console.error('Erro ao obter access token:', err);
@@ -83,7 +90,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: false, message: 'No tokens for this email.' });
     }
 
-    console.log('Tokens encontrados:', tokens.map(t => t.token).join(', '));
+    // Exibe todos tokens encontrados para debug
+    tokens.forEach((t, i) => {
+      console.log(`[Token #${i + 1}] Token do destinatário para push:`, t.token);
+    });
 
     // Monta o conteúdo da notificação
     const title = Subject || 'Novo e-mail recebido';
@@ -111,6 +121,9 @@ export default async function handler(req, res) {
             notification: { title, body }
           }
         };
+        // Também exibe o payload que será enviado
+        console.log('Payload da notificação:', JSON.stringify(payload));
+
         const response = await axios.post(messagingEndpoint, payload, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
