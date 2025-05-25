@@ -20,9 +20,25 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Nenhum e-mail enviado.' });
   }
 
-  // Bloqueia envio para o endpoint inbound do Postmark
-  if (emails.some(email => email.trim().toLowerCase() === ENDPOINT_INBOUND)) {
-    return res.status(400).json({ error: 'Você não pode enviar e-mail para o endpoint inbound do Postmark. Isso gera notificações duplicadas para todos.' });
+  // Se houver mais de um destinatário, NUNCA envie para o endpoint inbound junto (evita notificação duplicada)
+  if (emails.length > 1 && emails.some(email => email.trim().toLowerCase() === ENDPOINT_INBOUND)) {
+    return res.status(400).json({ error: 'Você não pode enviar e-mail para o endpoint inbound do Postmark junto com outros destinatários. Isso gera notificações duplicadas para todos.' });
+  }
+
+  // Se estiver enviando apenas para o endpoint inbound, OK (esse caso é para trigger de push)
+  if (
+    emails.length === 1 &&
+    emails[0].trim().toLowerCase() === ENDPOINT_INBOUND
+  ) {
+    // Vai enviar o trigger de push
+  } else {
+    // Remova o endpoint inbound, caso alguém tente enviar para a equipe e sem querer inclua ele
+    emails = emails.filter(email => email.trim().toLowerCase() !== ENDPOINT_INBOUND);
+  }
+
+  // Depois do filtro, se não sobrou destinatário (ex: só tinha o endpoint inbound e você removeu), bloqueia
+  if (emails.length === 0) {
+    return res.status(400).json({ error: 'Nenhum destinatário válido para enviar e-mail.' });
   }
 
   try {
@@ -34,7 +50,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         From: 'contato@sprintcodes.com.br',
-        To: emails.join(','), // Aqui envia para todos os e-mails
+        To: emails.join(','),
         Subject: `Venda registrada: ${property}`,
         TextBody: `O imóvel ${property} foi marcado como vendido.`,
         MessageStream: 'outbound'
