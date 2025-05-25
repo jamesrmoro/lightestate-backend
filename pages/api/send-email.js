@@ -13,10 +13,16 @@ export default async function handler(req, res) {
 
   const { property, emails } = req.body;
   const POSTMARK_TOKEN = process.env.POSTMARK_TOKEN;
+  const ENDPOINT_INBOUND = 'd92b43c3f4789894b5f32edec838ccb9@inbound.postmarkapp.com';
 
   // Validação básica do array de e-mails
   if (!Array.isArray(emails) || emails.length === 0) {
     return res.status(400).json({ error: 'Nenhum e-mail enviado.' });
+  }
+
+  // Bloqueia envio para o endpoint inbound do Postmark
+  if (emails.some(email => email.trim().toLowerCase() === ENDPOINT_INBOUND)) {
+    return res.status(400).json({ error: 'Você não pode enviar e-mail para o endpoint inbound do Postmark. Isso gera notificações duplicadas para todos.' });
   }
 
   try {
