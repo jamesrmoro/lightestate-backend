@@ -109,11 +109,10 @@ export default async function handler(req, res) {
         const payload = {
           message: {
             token: t.token,
-            data: {
+            notification: {
               title,
               body,
-              icon: "/icone.png", // Se quiser customizar o ícone aqui
-              link: "https://lightestate.jamesrmoro.me"
+              icon: "/icone.png" // Se quiser customizar o ícone aqui
             },
             webpush: {
               fcm_options: {
