@@ -111,10 +111,14 @@ export default async function handler(req, res) {
             token: t.token,
             notification: {
               title,
-              body,
-              icon: "/icone.png" // Se quiser customizar o ícone aqui
+              body
             },
             webpush: {
+              notification: {
+                icon: "/icone.png", // Aqui vai o ícone
+                badge: "/icone.png", // Se quiser um badge
+                // Outras opções webpush: image, actions etc.
+              },
               fcm_options: {
                 link: "https://lightestate.jamesrmoro.me"
               }
