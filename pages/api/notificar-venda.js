@@ -50,15 +50,16 @@ export default async function handler(req, res) {
   // Prepare apenas data
   const mensagem = {
     data: {
-      title: `Nova venda!`,
-      body: `Apto ${numero_apartamento} (${empreendimento}) vendido.`,
+      title: String('Nova venda!'),
+      body: String(`Apto ${numero_apartamento} (${empreendimento}) vendido.`),
       empreendimento: String(empreendimento),
       numero_apartamento: String(numero_apartamento),
       andar: String(andar),
-      usuario: usuario || '',
-      data: data || '',
-    },
+      usuario: String(usuario || ''),
+      data: String(data || ''),
+    }
   };
+
 
   try {
     const response = await admin.messaging().sendEachForMulticast({
