@@ -109,7 +109,12 @@ export default async function handler(req, res) {
         const payload = {
           message: {
             token: t.token,
-            notification: { title, body },
+            data: {
+              title,
+              body,
+              icon: "/icone.png", // Se quiser customizar o ícone aqui
+              link: "https://lightestate.jamesrmoro.me"
+            },
             webpush: {
               fcm_options: {
                 link: "https://lightestate.jamesrmoro.me"
@@ -117,6 +122,7 @@ export default async function handler(req, res) {
             }
           }
         };
+
         console.log('Payload da notificação:', JSON.stringify(payload));
 
         const response = await axios.post(messagingEndpoint, payload, {
