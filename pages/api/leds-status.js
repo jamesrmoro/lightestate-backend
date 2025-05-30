@@ -48,7 +48,12 @@ export default async function handler(req, res) {
   // Só aceita apartamentos no range do total de LEDs
   const leds = (vendas || [])
     .map(v => Number(v.numero_apartamento))
-    .map(aptNum => aptNum - base + 1)
+    .map(apto => {
+      const andar = Math.floor(apto / 100);
+      const coluna = apto % 100;
+      const index = (andar - 1) * 7 + coluna; // LED 1–49
+      return index;
+    })
     .filter(idx => idx >= 1 && idx <= total);
 
   // Ex: { "leds": [1,3,5] }
