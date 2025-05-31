@@ -57,7 +57,7 @@ export default async function handler(req, res) {
             <table align="center" cellpadding="0" cellspacing="0" style="max-width:430px;width:100%;background:#fff;border-radius:16px;box-shadow:0 4px 24px #0002;font-family:sans-serif;">
               <tr>
                 <td style="padding:32px 32px 16px 32px;text-align:center;">
-                  <img src="https://lightestate-backend.vercel.app/assets/logo.png" alt="Light Estate" style="width:64px;margin-bottom:16px;">
+                  <img src="https://lightestate-backend.vercel.app/assets/logo.png" alt="Light Estate" style="width:155px;margin-bottom:16px;">
                   <h2 style="color:#1B6EBE;margin-bottom:8px;">Sale Completed!</h2>
                   <p style="color:#333;font-size:17px;margin:0 0 18px;">
                     Hello! A new property sale has just been registered in the system:
