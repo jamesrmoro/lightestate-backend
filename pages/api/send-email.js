@@ -84,6 +84,7 @@ export default async function handler(req, res) {
   MessageStream: 'outbound'
 });
 
+
     if (!response.ok) {
       const error = await response.json();
       return res.status(500).json({ error: 'Failed to send email.', detail: error });
