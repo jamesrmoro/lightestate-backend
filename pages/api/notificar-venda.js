@@ -31,28 +31,28 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 export default async function handler(req, res) {
   setCorsHeaders(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Só POST' });
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Only POST requests are allowed.' });
 
   const { empreendimento, numero_apartamento, andar, usuario, data } = req.body || {};
   if (!empreendimento || !numero_apartamento || !andar || !usuario || !data) {
-    res.status(400).json({ error: 'Campos obrigatórios faltando.' });
+    res.status(400).json({ error: 'Missing required fields.' });
     return;
   }
 
-  // Busca tokens
+  // Fetch tokens
   const { data: tokensData, error } = await supabase
     .from('push_tokens')
     .select('token');
-  if (error) return res.status(500).json({ error: 'Erro Supabase', detail: error });
+  if (error) return res.status(500).json({ error: 'Supabase error', detail: error });
 
   const tokens = (tokensData || []).map(t => t.token).filter(Boolean);
-  if (!tokens.length) return res.json({ sucesso: true, avisos: 'Nenhum token registrado' });
+  if (!tokens.length) return res.json({ success: true, warnings: 'No registered tokens.' });
 
-  // Apenas data (não mostra notificação na web, só background tasks)
+  // Data-only message (does not show notification on web, background tasks only)
   const mensagem = {
     data: {
-      title: 'Nova venda!',
-      body: `Apto ${numero_apartamento} (${empreendimento}) vendido.`,
+      title: 'New sale!',
+      body: `Apt ${numero_apartamento} (${empreendimento}) sold.`,
       empreendimento: String(empreendimento),
       numero_apartamento: String(numero_apartamento),
       andar: String(andar),
@@ -64,16 +64,16 @@ export default async function handler(req, res) {
   try {
     const response = await admin.messaging().sendEachForMulticast({
       tokens,
-      data: mensagem.data // Apenas DATA!
+      data: mensagem.data // Data-only message
     });
     res.json({
-      sucesso: true,
-      enviados: response.successCount,
-      falhas: response.failureCount,
-      resultados: response.responses // Detalha cada envio
+      success: true,
+      sent: response.successCount,
+      failed: response.failureCount,
+      results: response.responses // Details for each send
     });
   } catch (err) {
-    console.error('Erro ao enviar push:', err, err.stack, JSON.stringify(err, null, 2));
-    res.status(500).json({ error: 'Erro ao enviar push', detalhe: err.message });
+    console.error('Error sending push notification:', err, err.stack, JSON.stringify(err, null, 2));
+    res.status(500).json({ error: 'Error sending push notification', detail: err.message });
   }
 };

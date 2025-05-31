@@ -2,25 +2,25 @@ import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { JWT } from 'google-auth-library';
 
-// --- Carrega Service Account ---
+// --- Load Service Account ---
 let serviceAccount;
 try {
   if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-    console.log('Lendo Service Account do ENV...');
+    console.log('Loading Service Account from ENV...');
     serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
   } else if (process.env.FIREBASE_ADMIN_JSON) {
-    console.log('Lendo Service Account do ENV (FIREBASE_ADMIN_JSON)...');
+    console.log('Loading Service Account from ENV (FIREBASE_ADMIN_JSON)...');
     serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_JSON);
   } else {
-    // Fallback para ambiente local
+    // Fallback to local file
     const fs = require('fs');
     const path = require('path');
     const saPath = path.resolve(process.cwd(), 'service-account.json');
     serviceAccount = JSON.parse(fs.readFileSync(saPath, 'utf8'));
   }
-  console.log('Service account carregada, client_email:', serviceAccount.client_email);
+  console.log('Service account loaded, client_email:', serviceAccount.client_email);
 } catch (err) {
-  console.error('Erro ao carregar service account:', err);
+  console.error('Error loading service account:', err);
   throw err;
 }
 
@@ -32,7 +32,7 @@ const SCOPES = ['https://www.googleapis.com/auth/firebase.messaging'];
 const projectId = serviceAccount.project_id;
 const messagingEndpoint = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
 
-// --- Access Token JWT para FCM v1 ---
+// --- Access Token JWT for FCM v1 ---
 async function getAccessToken() {
   try {
     const client = new JWT({
@@ -40,24 +40,24 @@ async function getAccessToken() {
       key: serviceAccount.private_key,
       scopes: SCOPES,
     });
-    // O authorize pode retornar access_token ou token, dependendo da versão
+    // The authorize may return access_token or token, depending on version
     const tokens = await client.authorize();
     const token = tokens.access_token || tokens.token;
     if (!token) {
-      throw new Error('Access token não retornado pelo Google Auth.');
+      throw new Error('Access token not returned by Google Auth.');
     }
-    // Mostra um trecho do token só para debug (nunca mostre tudo em produção)
-    console.log('AccessToken obtido:', token.slice(0, 24) + '... (' + token.length + ' chars)');
+    // For debugging, show only a slice of the token (never log the full token in production)
+    console.log('AccessToken obtained:', token.slice(0, 24) + '... (' + token.length + ' chars)');
     return token;
   } catch (err) {
-    console.error('Erro ao obter access token:', err);
+    console.error('Error obtaining access token:', err);
     throw err;
   }
 }
 
 export default async function handler(req, res) {
-  // --- CORS HEADERS --- (primeira coisa dentro do handler!)
-  res.setHeader('Access-Control-Allow-Origin', '*'); // ou sua extensão no lugar de *
+  // --- CORS HEADERS ---
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Or your domain instead of *
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') {
@@ -72,42 +72,42 @@ export default async function handler(req, res) {
   try {
     const { title, body, Subject, TextBody } = req.body || {};
 
-    console.log('Webhook recebido!');
-    console.log('Assunto:', Subject);
+    console.log('Webhook received!');
+    console.log('Subject:', Subject);
 
-    // Busca TODOS tokens FCM no Supabase (broadcast)
+    // Fetch ALL FCM tokens from Supabase (broadcast)
     const { data: tokens, error } = await supabase
       .from('push_tokens')
       .select('token');
 
     if (error) {
-      console.error('Erro buscando tokens:', error);
+      console.error('Error fetching tokens:', error);
       return res.status(200).json({ ok: false, message: 'Token search failed' });
     }
     if (!tokens || tokens.length === 0) {
-      console.warn('Nenhum token encontrado no banco.');
+      console.warn('No tokens found in the database.');
       return res.status(200).json({ ok: false, message: 'No tokens registered.' });
     }
 
     tokens.forEach((t, i) => {
-      console.log(`[Token #${i + 1}] Token para push:`, t.token);
+      console.log(`[Token #${i + 1}] Push token:`, t.token);
     });
 
-    const pushTitle = title || Subject || 'Notificação';
-    const pushBody = body || TextBody || 'Você recebeu uma nova notificação!';
+    const pushTitle = title || Subject || 'Notification';
+    const pushBody = body || TextBody || 'You have received a new notification!';
 
     let accessToken;
     try {
       accessToken = await getAccessToken();
     } catch (err) {
-      console.error('ERRO ao obter access token (provável erro de JSON ou permissão):', err);
+      console.error('ERROR getting access token (likely JSON or permission issue):', err);
       return res.status(500).json({ ok: false, message: 'Failed to get access token', error: err.message });
     }
 
     let sentCount = 0;
     for (const t of tokens) {
       try {
-        console.log('Enviando push para token:', t.token);
+        console.log('Sending push to token:', t.token);
 
         const payload = {
           message: {
@@ -128,7 +128,7 @@ export default async function handler(req, res) {
           }
         };
 
-        console.log('Payload da notificação:', JSON.stringify(payload));
+        console.log('Notification payload:', JSON.stringify(payload));
 
         const response = await axios.post(messagingEndpoint, payload, {
           headers: {
@@ -136,13 +136,13 @@ export default async function handler(req, res) {
             'Content-Type': 'application/json'
           }
         });
-        console.log('Push enviado para token', t.token, 'Response:', response.data);
+        console.log('Push sent to token', t.token, 'Response:', response.data);
         sentCount++;
       } catch (e) {
         const errorData = e?.response?.data;
-        console.error('Erro ao enviar push:', errorData || e.message, 'Token:', t.token);
+        console.error('Error sending push:', errorData || e.message, 'Token:', t.token);
 
-        // Remove token do Supabase se for UNREGISTERED
+        // Remove token from Supabase if it's UNREGISTERED
         if (
           errorData?.error?.details?.some(
             detail => detail.errorCode === "UNREGISTERED"
@@ -154,12 +154,12 @@ export default async function handler(req, res) {
               .delete()
               .eq('token', t.token);
             if (removeError) {
-              console.error('Erro ao remover token inválido do Supabase:', removeError);
+              console.error('Error removing invalid token from Supabase:', removeError);
             } else {
-              console.log('Token UNREGISTERED removido do Supabase:', t.token);
+              console.log('UNREGISTERED token removed from Supabase:', t.token);
             }
           } catch (supabaseError) {
-            console.error('Erro inesperado ao remover token:', supabaseError);
+            console.error('Unexpected error removing token:', supabaseError);
           }
         }
       }
@@ -167,7 +167,7 @@ export default async function handler(req, res) {
 
     res.status(200).json({ ok: true, sent: sentCount });
   } catch (err) {
-    console.error('ERRO GERAL no handler:', err);
+    console.error('GENERAL ERROR in handler:', err);
     res.status(500).json({ ok: false, error: err.message });
   }
 }
