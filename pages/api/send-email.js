@@ -49,13 +49,40 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        From: 'Light Estate <contato@sprintcodes.com.br>',
-        To: emails.join(','),
-        Subject: `Sale registered: ${property}`,
-        TextBody: `The property ${property} has been marked as sold.`,
-        MessageStream: 'outbound'
-      })
-    });
+  From: 'Light Estate <contato@sprintcodes.com.br>',
+  To: emails.join(','),
+  Subject: `🏠 New Sale Registered: ${property}`,
+  HtmlBody: `
+    <div style="background:#f8fafc;padding:32px 0;min-height:100vh;">
+      <table align="center" cellpadding="0" cellspacing="0" style="max-width:430px;width:100%;background:#fff;border-radius:16px;box-shadow:0 4px 24px #0002;font-family:sans-serif;">
+        <tr>
+          <td style="padding:32px 32px 16px 32px;text-align:center;">
+            <img src="https://lightestate.vercel.app/assets/logo-lightestate.png" alt="Light Estate" style="width:64px;margin-bottom:16px;">
+            <h2 style="color:#1B6EBE;margin-bottom:8px;">Sale Completed!</h2>
+            <p style="color:#333;font-size:17px;margin:0 0 18px;">
+              Hello! A new property sale has just been registered in the system:
+            </p>
+            <table style="background:#f4f8ff;border-radius:12px;padding:18px;width:100%;margin-bottom:16px;">
+              <tr>
+                <td style="font-weight:bold;color:#1B6EBE;padding-right:12px;">Property:</td>
+                <td style="color:#333;">${property}</td>
+              </tr>
+              <tr>
+                <td style="font-weight:bold;color:#1B6EBE;padding-right:12px;">Status:</td>
+                <td style="color:#318834;">SOLD</td>
+              </tr>
+            </table>
+            <a href="https://lightestate.vercel.app/dashboard" style="display:inline-block;margin-top:14px;padding:13px 30px;border-radius:8px;background:#318834;color:#fff;font-weight:bold;text-decoration:none;font-size:16px;box-shadow:0 1px 6px #31883433;">View in Dashboard</a>
+            <p style="color:#A8669C;margin-top:22px;font-size:15px;">
+              Light Estate &mdash; Innovation for the Real Estate Market
+            </p>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `,
+  MessageStream: 'outbound'
+});
 
     if (!response.ok) {
       const error = await response.json();
