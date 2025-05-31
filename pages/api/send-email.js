@@ -49,7 +49,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        From: 'contato@sprintcodes.com.br',
+        From: 'Light Estate <contato@sprintcodes.com.br>',
         To: emails.join(','),
         Subject: `Sale registered: ${property}`,
         TextBody: `The property ${property} has been marked as sold.`,
