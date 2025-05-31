@@ -51,7 +51,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         From: 'Light Estate <contato@sprintcodes.com.br>',
         To: emails.join(','),
-        Subject: `New Sale Registered: ${property}`,
+        Subject: `🏠 New Sale Registered: ${property}`,
         HtmlBody: `
           <div style="background:#f8fafc;padding:32px 0;min-height:100vh;">
             <table align="center" cellpadding="0" cellspacing="0" style="max-width:430px;width:100%;background:#fff;border-radius:16px;box-shadow:0 4px 24px #0002;font-family:sans-serif;">
